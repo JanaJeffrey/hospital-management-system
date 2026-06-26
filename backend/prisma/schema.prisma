@@ -1,0 +1,201 @@
+// This is your database schema – it defines what tables and fields your database will have
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS TABLE – stores patients, doctors, and admins
+// ============================================
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(PATIENT)
+  
+  // Doctor Verification Fields
+  licenseNumber String?
+  specialization String?
+  yearsExperience Int?
+  certificateUrl String?
+  status        UserStatus @default(ACTIVE)
+  
+  // ✅ NEW: Store why a doctor was rejected
+  rejectionReason String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  appointmentsAsPatient Appointment[] @relation("patientAppointments")
+  appointmentsAsDoctor  Appointment[] @relation("doctorAppointments")
+  doctorSchedule        DoctorSchedule?
+  patientRecord         PatientRecord?
+  
+  patientPrescriptions  PatientPrescription[] @relation("patientPrescriptions")
+  doctorPrescriptions   PatientPrescription[] @relation("doctorPrescriptions")
+  patientLabReports     PatientLabReport[] @relation("patientLabReports")
+  doctorLabReports      PatientLabReport[] @relation("doctorLabReports")
+  
+  notifications Notification[]
+}
+
+// ============================================
+// APPOINTMENT TABLE
+// ============================================
+model Appointment {
+  id          Int              @id @default(autoincrement())
+  patientId   Int
+  doctorId    Int
+  dateTime    DateTime
+  status      AppointmentStatus @default(PENDING)
+  reason      String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  patient     User @relation(fields: [patientId], references: [id], name: "patientAppointments")
+  doctor      User @relation(fields: [doctorId], references: [id], name: "doctorAppointments")
+
+  @@unique([doctorId, dateTime])
+}
+
+// ============================================
+// DOCTOR SCHEDULE
+// ============================================
+model DoctorSchedule {
+  id          Int    @id @default(autoincrement())
+  doctorId    Int    @unique
+  doctor      User   @relation(fields: [doctorId], references: [id])
+
+  mondayStart   String?
+  mondayEnd     String?
+  tuesdayStart  String?
+  tuesdayEnd    String?
+  wednesdayStart String?
+  wednesdayEnd   String?
+  thursdayStart String?
+  thursdayEnd   String?
+  fridayStart   String?
+  fridayEnd     String?
+  saturdayStart String?
+  saturdayEnd   String?
+  sundayStart   String?
+  sundayEnd     String?
+}
+
+// ============================================
+// PATIENT RECORDS
+// ============================================
+model PatientRecord {
+  id          Int      @id @default(autoincrement())
+  patientId   Int      @unique
+  patient     User     @relation(fields: [patientId], references: [id])
+
+  bloodType   String?
+  allergies   String?
+  medications String?
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// PRESCRIPTIONS
+// ============================================
+model PatientPrescription {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  doctorId    Int
+  patient     User     @relation(fields: [patientId], references: [id], name: "patientPrescriptions")
+  doctor      User     @relation(fields: [doctorId], references: [id], name: "doctorPrescriptions")
+  
+  medication  String
+  dosage      String
+  frequency   String
+  notes       String?
+  status      PrescriptionStatus @default(ACTIVE)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// LAB REPORTS
+// ============================================
+model PatientLabReport {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  doctorId    Int
+  patient     User     @relation(fields: [patientId], references: [id], name: "patientLabReports")
+  doctor      User     @relation(fields: [doctorId], references: [id], name: "doctorLabReports")
+  
+  name        String
+  type        String
+  date        DateTime @default(now())
+  status      LabReportStatus @default(PENDING)
+  notes       String?
+  results     String?
+  fileUrl     String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+model Notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  title       String
+  message     String
+  data        Json?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  REJECTED     // ✅ Already exists
+  DEACTIVATED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+enum LabReportStatus {
+  PENDING
+  REVIEWING
+  READY
+}
