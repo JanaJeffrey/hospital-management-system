@@ -11,11 +11,11 @@ export default function ContactPage() {
         <div className="space-y-3">
           <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--input-bg)" }}>
             <p className="font-medium" style={{ color: "var(--text)" }}>📧 Email</p>
-            <p style={{ color: "var(--text-light)" }}>support@medicarehub.com</p>
+            <p style={{ color: "var(--text-light)" }}>medicarehub@gmail.com</p>
           </div>
           <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--input-bg)" }}>
             <p className="font-medium" style={{ color: "var(--text)" }}>📞 Phone</p>
-            <p style={{ color: "var(--text-light)" }}>+1 (555) 123-4567</p>
+            <p style={{ color: "var(--text-light)" }}>+1 (310) 602-6977</p>
           </div>
           <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--input-bg)" }}>
             <p className="font-medium" style={{ color: "var(--text)" }}>📍 Address</p>
