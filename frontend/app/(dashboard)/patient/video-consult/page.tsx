@@ -65,7 +65,7 @@ export default function PatientVideoConsultPage() {
     }
   }, [router, appointmentId]);
 
-  // ✅ Fetch specific appointment
+  // ✅ Fetch specific appointment from BACKEND
   const fetchAppointment = async (id: number) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -74,6 +74,7 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
+      // ✅ REAL API CALL - Fetches patient's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/my`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -96,6 +97,7 @@ export default function PatientVideoConsultPage() {
       }
       
       setAppointment(found);
+      // Generate a unique room ID for the call
       setRoomId(`call-${found.id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -106,7 +108,7 @@ export default function PatientVideoConsultPage() {
     }
   };
 
-  // ✅ Fetch latest upcoming appointment
+  // ✅ Fetch latest upcoming appointment from BACKEND
   const fetchLatestAppointment = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -115,6 +117,7 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
+      // ✅ REAL API CALL - Fetches patient's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/my`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -130,6 +133,7 @@ export default function PatientVideoConsultPage() {
       
       const appointments = await response.json();
       
+      // Find the nearest upcoming appointment (CONFIRMED or PENDING)
       const now = new Date();
       const upcoming = appointments
         .filter((apt: any) => 
@@ -146,6 +150,7 @@ export default function PatientVideoConsultPage() {
       }
       
       setAppointment(upcoming[0]);
+      // Generate a unique room ID for the call
       setRoomId(`call-${upcoming[0].id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -156,11 +161,12 @@ export default function PatientVideoConsultPage() {
     }
   };
 
-  // ✅ Handle end call
+  // ✅ Handle end call - Updates appointment status in BACKEND
   const handleEndCall = async () => {
     if (appointment) {
       const token = localStorage.getItem("token");
       try {
+        // ✅ REAL API CALL - Updates appointment status to COMPLETED
         await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
           method: "PUT",
           headers: {
@@ -232,7 +238,7 @@ export default function PatientVideoConsultPage() {
         </div>
       </div>
 
-      {/* Video Call Component */}
+      {/* Video Call Component - Uses REAL PeerJS */}
       <VideoCall
         roomId={roomId}
         isDoctor={false}

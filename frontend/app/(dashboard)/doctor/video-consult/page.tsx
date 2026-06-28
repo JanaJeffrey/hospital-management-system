@@ -14,12 +14,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface Appointment {
   id: number;
+  patientId: number;
   patient: {
     name: string;
     email: string;
   };
+  doctorId: number;
   dateTime: string;
   status: string;
+  reason: string | null;
 }
 
 export default function DoctorVideoConsultPage() {
@@ -63,7 +66,7 @@ export default function DoctorVideoConsultPage() {
     }
   }, [router, appointmentId]);
 
-  // ✅ Fetch specific appointment
+  // ✅ Fetch specific appointment from BACKEND
   const fetchAppointment = async (id: number) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -72,6 +75,7 @@ export default function DoctorVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
+      // ✅ REAL API CALL - Fetches doctor's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -94,6 +98,7 @@ export default function DoctorVideoConsultPage() {
       }
       
       setAppointment(found);
+      // Generate a unique room ID for the call
       setRoomId(`call-${found.id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -104,7 +109,7 @@ export default function DoctorVideoConsultPage() {
     }
   };
 
-  // ✅ Fetch latest upcoming appointment
+  // ✅ Fetch latest upcoming appointment from BACKEND
   const fetchLatestAppointment = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -113,6 +118,7 @@ export default function DoctorVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
+      // ✅ REAL API CALL - Fetches doctor's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -127,6 +133,8 @@ export default function DoctorVideoConsultPage() {
       if (!response.ok) throw new Error("Failed to fetch appointments");
       
       const appointments = await response.json();
+      
+      // Find the nearest upcoming appointment (CONFIRMED or PENDING)
       const now = new Date();
       const upcoming = appointments
         .filter((apt: any) => 
@@ -138,11 +146,12 @@ export default function DoctorVideoConsultPage() {
         );
       
       if (upcoming.length === 0) {
-        setError("No upcoming appointments");
+        setError("No upcoming appointments found.");
         return;
       }
       
       setAppointment(upcoming[0]);
+      // Generate a unique room ID for the call
       setRoomId(`call-${upcoming[0].id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -153,11 +162,12 @@ export default function DoctorVideoConsultPage() {
     }
   };
 
-  // ✅ Handle end call
+  // ✅ Handle end call - Updates appointment status in BACKEND
   const handleEndCall = async () => {
     if (appointment) {
       const token = localStorage.getItem("token");
       try {
+        // ✅ REAL API CALL - Updates appointment status to COMPLETED
         await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
           method: "PUT",
           headers: {
@@ -196,7 +206,7 @@ export default function DoctorVideoConsultPage() {
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>No Appointment Found</h2>
-          <p className="mt-2" style={{ color: "var(--text-light)" }}>{error}</p>
+          <p className="mt-2" style={{ color: "var(--text-light)" }}>{error || "No upcoming appointments available for video consultation."}</p>
           <Link 
             href="/doctor/dashboard"
             className="inline-block mt-4 px-4 py-2 rounded-xl text-white"
@@ -229,7 +239,7 @@ export default function DoctorVideoConsultPage() {
         </div>
       </div>
 
-      {/* Video Call Component */}
+      {/* Video Call Component - Uses REAL PeerJS */}
       <VideoCall
         roomId={roomId}
         isDoctor={true}
