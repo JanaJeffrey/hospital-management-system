@@ -1,5 +1,8 @@
 "use client";
 
+// ✅ THIS FIXES THE VERCEL BUILD ERROR
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -11,17 +14,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface Appointment {
   id: number;
-  doctorId: number;
-  doctor: {
+  patient: {
     name: string;
     email: string;
   };
   dateTime: string;
   status: string;
-  reason: string | null;
 }
 
-export default function PatientVideoConsultPage() {
+export default function DoctorVideoConsultPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const appointmentId = searchParams.get('appointmentId');
@@ -31,7 +32,7 @@ export default function PatientVideoConsultPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [roomId, setRoomId] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userName, setUserName] = useState("");
+  const [doctorName, setDoctorName] = useState("");
 
   // ✅ Check authentication
   useEffect(() => {
@@ -45,11 +46,11 @@ export default function PatientVideoConsultPage() {
     
     try {
       const user = JSON.parse(userStr);
-      if (user.role?.toLowerCase() !== "patient") {
-        router.replace("/doctor/dashboard");
+      if (user.role?.toLowerCase() !== "doctor") {
+        router.replace("/patient/dashboard");
         return;
       }
-      setUserName(user.name || "Patient");
+      setDoctorName(user.name || "Doctor");
       setIsAuthenticated(true);
       
       if (appointmentId) {
@@ -71,7 +72,7 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch(`${API_URL}/api/appointments/my`, {
+      const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -93,7 +94,6 @@ export default function PatientVideoConsultPage() {
       }
       
       setAppointment(found);
-      // Generate a unique room ID for the call
       setRoomId(`call-${found.id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -113,7 +113,7 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch(`${API_URL}/api/appointments/my`, {
+      const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -127,8 +127,6 @@ export default function PatientVideoConsultPage() {
       if (!response.ok) throw new Error("Failed to fetch appointments");
       
       const appointments = await response.json();
-      
-      // Find the nearest upcoming appointment (CONFIRMED or PENDING)
       const now = new Date();
       const upcoming = appointments
         .filter((apt: any) => 
@@ -140,12 +138,11 @@ export default function PatientVideoConsultPage() {
         );
       
       if (upcoming.length === 0) {
-        setError("No upcoming appointments found. Please book an appointment first.");
+        setError("No upcoming appointments");
         return;
       }
       
       setAppointment(upcoming[0]);
-      // Generate a unique room ID for the call
       setRoomId(`call-${upcoming[0].id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -173,7 +170,7 @@ export default function PatientVideoConsultPage() {
         console.error("Error updating appointment status:", err);
       }
     }
-    router.push("/patient/dashboard");
+    router.push("/doctor/dashboard");
   };
 
   if (!isAuthenticated) {
@@ -199,13 +196,13 @@ export default function PatientVideoConsultPage() {
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
           <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>No Appointment Found</h2>
-          <p className="mt-2" style={{ color: "var(--text-light)" }}>{error || "Please book an appointment before starting a video consultation."}</p>
+          <p className="mt-2" style={{ color: "var(--text-light)" }}>{error}</p>
           <Link 
-            href="/patient/book-appointment"
+            href="/doctor/dashboard"
             className="inline-block mt-4 px-4 py-2 rounded-xl text-white"
             style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
           >
-            Book Appointment
+            Back to Dashboard
           </Link>
         </div>
       </div>
@@ -218,7 +215,7 @@ export default function PatientVideoConsultPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/patient/dashboard")}
+            onClick={() => router.push("/doctor/dashboard")}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
           >
             <ArrowLeft className="w-5 h-5" style={{ color: "var(--text)" }} />
@@ -226,7 +223,7 @@ export default function PatientVideoConsultPage() {
           <div>
             <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Video Consultation</h1>
             <p className="text-sm" style={{ color: "var(--text-light)" }}>
-              With Dr. {appointment.doctor.name} · {new Date(appointment.dateTime).toLocaleString()}
+              With {appointment.patient.name} · {new Date(appointment.dateTime).toLocaleString()}
             </p>
           </div>
         </div>
@@ -235,9 +232,9 @@ export default function PatientVideoConsultPage() {
       {/* Video Call Component */}
       <VideoCall
         roomId={roomId}
-        isDoctor={false}
-        doctorName={appointment.doctor.name}
-        patientName={userName}
+        isDoctor={true}
+        doctorName={doctorName}
+        patientName={appointment.patient.name}
         onEndCall={handleEndCall}
       />
     </div>

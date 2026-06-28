@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { 
-  Video, Mic, MicOff, VideoOff, PhoneOff,
-  Maximize2, Minimize2, Users
-} from "lucide-react";
+import { Video, Mic, MicOff, VideoOff, PhoneOff, Loader2 } from "lucide-react";
 
 interface VideoCallProps {
   roomId: string;
@@ -25,17 +22,20 @@ export function VideoCall({
   const [cameraOn, setCameraOn] = useState(true);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [peerConnected, setPeerConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
+  const [peerId, setPeerId] = useState("");
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<any>(null);
+  const callRef = useRef<any>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ Initialize PeerJS
   useEffect(() => {
-    // Initialize PeerJS
     const initPeer = async () => {
       try {
         const Peer = (await import('peerjs')).default;
@@ -52,7 +52,8 @@ export function VideoCall({
         
         peer.on('open', (id: string) => {
           console.log('Peer connected with ID:', id);
-          setPeerConnected(true);
+          setPeerId(id);
+          setIsConnecting(false);
           
           // If doctor, they need to join the room
           if (isDoctor) {
@@ -66,6 +67,7 @@ export function VideoCall({
         peer.on('error', (err: any) => {
           console.error('Peer error:', err);
           setError('Connection error. Please try again.');
+          setIsConnecting(false);
         });
         
         peer.on('call', (call: any) => {
@@ -73,36 +75,33 @@ export function VideoCall({
           if (localStreamRef.current) {
             call.answer(localStreamRef.current);
             call.on('stream', (remoteStream: MediaStream) => {
+              setRemoteStream(remoteStream);
               if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = remoteStream;
               }
+              setIsCallActive(true);
+              setIsConnecting(false);
+              startTimer();
             });
-            setIsCallActive(true);
+            callRef.current = call;
           }
         });
         
       } catch (err) {
         console.error('Error initializing PeerJS:', err);
-        setError('Failed to initialize video call.');
+        setError('Failed to initialize video call. Please refresh and try again.');
+        setIsConnecting(false);
       }
     };
     
     initPeer();
     
     return () => {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current);
-      }
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
+      cleanup();
     };
   }, [roomId, isDoctor]);
 
-  // Start local media
+  // ✅ Start local media
   const startLocalMedia = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -129,56 +128,81 @@ export function VideoCall({
         setCameraOn(false);
         return true;
       } catch (audioErr) {
-        setError('Unable to access camera or microphone.');
+        setError('Unable to access camera or microphone. Please check your permissions.');
         return false;
       }
     }
   };
 
-  // Patient starts the call
+  // ✅ Patient starts the call
   const startCall = async () => {
     const mediaReady = await startLocalMedia();
     if (!mediaReady) return;
     
-    setIsCallActive(true);
-    startTimer();
+    // Patient is the caller - they'll be called by the doctor
+    setIsConnecting(false);
   };
 
-  // Doctor joins the call
+  // ✅ Doctor joins the call
   const joinCall = async (roomId: string) => {
     const mediaReady = await startLocalMedia();
     if (!mediaReady) return;
     
     try {
+      // Doctor calls the patient using roomId as the peer ID
       const call = peerRef.current.call(roomId, localStreamRef.current);
       call.on('stream', (remoteStream: MediaStream) => {
+        setRemoteStream(remoteStream);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
+        setIsCallActive(true);
+        setIsConnecting(false);
+        startTimer();
       });
-      setIsCallActive(true);
-      startTimer();
+      callRef.current = call;
     } catch (err) {
       console.error('Error joining call:', err);
       setError('Could not join the call. Please try again.');
+      setIsConnecting(false);
     }
   };
 
-  // Start timer
+  // ✅ Start timer
   const startTimer = () => {
     callTimerRef.current = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
   };
 
-  // Format duration
+  // ✅ Cleanup
+  const cleanup = () => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    if (callRef.current) {
+      callRef.current.close();
+      callRef.current = null;
+    }
+  };
+
+  // ✅ Format duration
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Toggle mic
+  // ✅ Toggle mic
   const toggleMic = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach(track => {
@@ -188,7 +212,7 @@ export function VideoCall({
     }
   };
 
-  // Toggle camera
+  // ✅ Toggle camera
   const toggleCamera = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getVideoTracks().forEach(track => {
@@ -198,17 +222,9 @@ export function VideoCall({
     }
   };
 
-  // End call
+  // ✅ End call
   const endCall = () => {
-    if (callTimerRef.current) {
-      clearInterval(callTimerRef.current);
-    }
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-    }
-    if (peerRef.current) {
-      peerRef.current.destroy();
-    }
+    cleanup();
     onEndCall();
   };
 
@@ -218,6 +234,12 @@ export function VideoCall({
       {error && (
         <div className="p-4 mb-4 rounded-xl bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400">
           {error}
+          <button 
+            onClick={() => window.location.reload()} 
+            className="ml-3 underline hover:no-underline"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -232,22 +254,31 @@ export function VideoCall({
         />
         
         {/* Remote Avatar (when no remote stream) */}
-        {!remoteVideoRef.current?.srcObject && (
+        {!remoteStream && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <Users className="w-16 h-16 text-white/20 mx-auto mb-4" />
-              <p className="text-white/30">
-                {isDoctor ? `Waiting for patient...` : `Waiting for doctor...`}
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl text-emerald-400 font-bold">
+                  {isDoctor ? patientName.charAt(0).toUpperCase() : doctorName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <p className="text-white/50 text-sm font-medium">
+                {isConnecting ? 'Connecting...' : 'Waiting for participant...'}
               </p>
-              <p className="text-white/20 text-sm mt-2">
-                Room: {roomId.slice(0, 8)}
+              <p className="text-white/30 text-xs mt-2">
+                Room: {roomId.slice(0, 8)}...{roomId.slice(-4)}
               </p>
+              {isDoctor && !isConnecting && (
+                <p className="text-white/40 text-xs mt-1">
+                  Call the patient using this room ID
+                </p>
+              )}
             </div>
           </div>
         )}
 
         {/* Local Video (Picture-in-Picture) */}
-        <div className="absolute bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-xl overflow-hidden border-2 border-white/20">
+        <div className="absolute bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-xl overflow-hidden border-2 border-white/20 bg-gray-800">
           <video
             ref={localVideoRef}
             autoPlay
@@ -256,7 +287,7 @@ export function VideoCall({
             className={`w-full h-full object-cover ${!cameraOn ? 'hidden' : ''}`}
           />
           {!cameraOn && (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+            <div className="w-full h-full flex items-center justify-center">
               <VideoOff className="w-8 h-8 text-white/30" />
             </div>
           )}
@@ -267,9 +298,9 @@ export function VideoCall({
 
         {/* Status */}
         <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
-          <div className={`w-2 h-2 rounded-full ${isCallActive ? 'bg-emerald-500 animate-pulse' : 'bg-yellow-500'}`}></div>
+          <div className={`w-2 h-2 rounded-full ${isCallActive ? 'bg-emerald-500 animate-pulse' : 'bg-yellow-500 animate-pulse'}`}></div>
           <span className="text-white text-xs font-medium">
-            {isCallActive ? 'Live' : 'Connecting...'}
+            {isConnecting ? 'Connecting...' : isCallActive ? 'Live' : 'Waiting'}
           </span>
           {isCallActive && (
             <span className="text-white/50 text-xs ml-2">{formatDuration(callDuration)}</span>
@@ -280,14 +311,20 @@ export function VideoCall({
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3 bg-black/50 backdrop-blur-sm px-4 py-3 rounded-full">
           <button
             onClick={toggleMic}
-            className={`p-2 rounded-full transition hover:scale-110 ${micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'}`}
+            disabled={!isCallActive && !isConnecting}
+            className={`p-2 rounded-full transition hover:scale-110 disabled:opacity-50 ${
+              micOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'
+            }`}
           >
             {micOn ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-white" />}
           </button>
           
           <button
             onClick={toggleCamera}
-            className={`p-2 rounded-full transition hover:scale-110 ${cameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'}`}
+            disabled={!isCallActive && !isConnecting}
+            className={`p-2 rounded-full transition hover:scale-110 disabled:opacity-50 ${
+              cameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'
+            }`}
           >
             {cameraOn ? <Video className="w-5 h-5 text-white" /> : <VideoOff className="w-5 h-5 text-white" />}
           </button>
@@ -313,6 +350,11 @@ export function VideoCall({
         <p className="text-xs" style={{ color: "var(--text-light)" }}>
           Room ID: {roomId.slice(0, 8)}...{roomId.slice(-4)}
         </p>
+        {isDoctor && !isCallActive && !isConnecting && (
+          <p className="text-xs mt-1 text-emerald-400">
+            Share this Room ID with the patient: {roomId}
+          </p>
+        )}
       </div>
     </div>
   );
