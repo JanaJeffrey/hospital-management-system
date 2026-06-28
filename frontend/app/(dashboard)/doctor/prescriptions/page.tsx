@@ -10,6 +10,9 @@ import {
   Loader2, X
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Prescription {
   id: number;
   patientId: number;
@@ -85,7 +88,8 @@ export default function DoctorPrescriptionsPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch("http://localhost:5000/api/analytics/stats", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/analytics/stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -119,14 +123,13 @@ export default function DoctorPrescriptionsPage() {
     if (!token) return;
     
     try {
-      // Try to fetch patients from analytics
-      const response = await fetch("http://localhost:5000/api/analytics/stats", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/analytics/stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
       if (response.ok) {
         const data = await response.json();
-        // Extract patients from appointments or use mock for now
         if (data.appointments && Array.isArray(data.appointments)) {
           const uniquePatients = data.appointments
             .filter((a: any) => a.patient)
@@ -135,7 +138,6 @@ export default function DoctorPrescriptionsPage() {
               name: a.patient.name,
               email: a.patient.email
             }));
-          // Remove duplicates
           const seen = new Set();
           const unique = uniquePatients.filter((p: any) => {
             const duplicate = seen.has(p.id);
@@ -147,7 +149,6 @@ export default function DoctorPrescriptionsPage() {
             { id: 2, name: "Jane Smith", email: "jane@example.com" }
           ]);
         } else {
-          // Mock patients if none exist
           setPatients([
             { id: 1, name: "John Patient", email: "patient@example.com" },
             { id: 2, name: "Jane Smith", email: "jane@example.com" }
@@ -177,8 +178,14 @@ export default function DoctorPrescriptionsPage() {
     }
     
     try {
-      // This would connect to your backend endpoint
-      // For now, we'll simulate adding it to the list
+      // In production, you'd POST to your API:
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // const response = await fetch(`${API_URL}/api/prescriptions`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      //   body: JSON.stringify(newPrescription)
+      // });
+      
       const newPrescriptionData = {
         id: Date.now(),
         patientId: parseInt(newPrescription.patientId),
@@ -194,13 +201,6 @@ export default function DoctorPrescriptionsPage() {
           email: ""
         }
       };
-      
-      // In production, you'd POST to your API:
-      // const response = await fetch("http://localhost:5000/api/prescriptions", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      //   body: JSON.stringify(newPrescription)
-      // });
       
       setPrescriptions([newPrescriptionData as any, ...prescriptions]);
       setShowAddModal(false);
@@ -405,7 +405,7 @@ export default function DoctorPrescriptionsPage() {
         </p>
       </div>
 
-      {/* ✅ Add Prescription Modal */}
+      {/* Add Prescription Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
           <div className="max-w-md w-full rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>

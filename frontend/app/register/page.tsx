@@ -6,6 +6,9 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, User, UserPlus, Stethoscope, Calendar, Activity, Sparkles, Award, FileText, Clock } from "lucide-react";
 import SimpleTheme from "../components/SimpleTheme";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -78,7 +81,7 @@ export default function RegisterPage() {
     }
 
     try {
-      // ✅ Use FormData for file upload
+      // Use FormData for file upload
       const formData = new FormData();
       formData.append('name', name);
       formData.append('email', email);
@@ -94,10 +97,10 @@ export default function RegisterPage() {
         }
       }
 
-      // ✅ Send as FormData, not JSON
-      const response = await fetch("http://localhost:5000/api/auth/register", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
-        body: formData,  // ✅ FormData, not JSON
+        body: formData,
       });
 
       const data = await response.json();
@@ -316,7 +319,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* ✅ DOCTOR VERIFICATION FIELDS */}
+              {/* Doctor Verification Fields */}
               {role === "doctor" && (
                 <div className="space-y-4 p-4 rounded-xl" style={{ backgroundColor: "rgba(16,185,129,0.05)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center gap-2">
@@ -385,7 +388,7 @@ export default function RegisterPage() {
                     />
                   </div>
                   
-                  {/* ✅ Certificate Upload - Now sends file to backend */}
+                  {/* Certificate Upload */}
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: "var(--text)" }}>Upload Certificate or License (PDF/Image)</label>
                     <input

@@ -9,6 +9,9 @@ import {
   AlertCircle, Microscope, RefreshCw
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface LabReport {
   id: number;
   name: string;
@@ -67,7 +70,8 @@ export default function LabReportsPage() {
         setIsLoading(true);
         setError("");
         
-        const response = await fetch("http://localhost:5000/api/analytics/stats", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const response = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         

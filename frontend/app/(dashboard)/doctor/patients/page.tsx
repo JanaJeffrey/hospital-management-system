@@ -8,6 +8,9 @@ import {
   Calendar, User, ChevronRight, Filter
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Patient {
   id: number;
   name: string;
@@ -51,8 +54,8 @@ export default function DoctorPatientsPage() {
     if (!token) return;
     
     try {
-      // Fetch appointments to extract unique patients
-      const response = await fetch("http://localhost:5000/api/appointments/doctor", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

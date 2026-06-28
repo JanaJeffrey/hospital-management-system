@@ -9,6 +9,9 @@ import {
   Save, Trash2, LogOut
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface User {
   id?: number;
   name: string;
@@ -49,7 +52,6 @@ export default function SettingsPage() {
     
     try {
       const parsedUser = JSON.parse(userStr);
-      // ✅ Ensure role exists
       const userData: User = {
         name: parsedUser.name || "",
         email: parsedUser.email || "",
@@ -73,7 +75,8 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/auth/update-profile", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/update-profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -88,7 +91,6 @@ export default function SettingsPage() {
         throw new Error(data.error || "Failed to update profile");
       }
       
-      // ✅ Fix: Ensure role exists when updating
       const updatedUser: User = {
         ...user!,
         name: name,
@@ -127,7 +129,8 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/auth/change-password", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/change-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +162,8 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/auth/deactivate", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/deactivate`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -185,7 +189,8 @@ export default function SettingsPage() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/auth/delete-account", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/delete-account`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`

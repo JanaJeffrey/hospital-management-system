@@ -9,6 +9,9 @@ import {
   Phone, Mail, MapPin
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface AppointmentDetail {
   id: number;
   dateTime: string;
@@ -27,7 +30,7 @@ interface AppointmentDetail {
   };
 }
 
-export default function DoctorAppointmentDetailPage() {
+export default function PatientAppointmentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const appointmentId = params.id;
@@ -61,7 +64,8 @@ export default function DoctorAppointmentDetailPage() {
         setIsLoading(true);
         setError("");
         
-        const response = await fetch("http://localhost:5000/api/appointments/doctor", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const response = await fetch(`${API_URL}/api/appointments/patient`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -152,7 +156,7 @@ export default function DoctorAppointmentDetailPage() {
           <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>Appointment Not Found</h2>
           <p className="mt-2" style={{ color: "var(--text-light)" }}>{error || "The appointment you're looking for doesn't exist."}</p>
           <Link 
-            href="/doctor/dashboard" 
+            href="/patient/dashboard" 
             className="inline-block mt-4 px-4 py-2 rounded-xl text-white"
             style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
           >
@@ -168,15 +172,15 @@ export default function DoctorAppointmentDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link 
-          href="/doctor/dashboard" 
+          href="/patient/dashboard" 
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
         >
           <ArrowLeft className="w-5 h-5" style={{ color: "var(--text)" }} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Patient Appointment</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Appointment Details</h1>
           <p className="text-sm" style={{ color: "var(--text-light)" }}>
-            View patient information and appointment details
+            View your appointment information
           </p>
         </div>
       </div>
@@ -198,16 +202,16 @@ export default function DoctorAppointmentDetailPage() {
       {/* Main Card */}
       <div className="rounded-2xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="p-6 space-y-6">
-          {/* Patient Info */}
+          {/* Doctor Info */}
           <div>
-            <h3 className="text-sm font-medium mb-3" style={{ color: "var(--text-light)" }}>Patient</h3>
+            <h3 className="text-sm font-medium mb-3" style={{ color: "var(--text-light)" }}>Doctor</h3>
             <div className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: "var(--input-bg)" }}>
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}>
-                {appointment.patient.name.charAt(0)}
+                {appointment.doctor.name.charAt(0)}
               </div>
               <div>
-                <p className="font-semibold" style={{ color: "var(--text)" }}>{appointment.patient.name}</p>
-                <p className="text-sm" style={{ color: "var(--text-light)" }}>{appointment.patient.email}</p>
+                <p className="font-semibold" style={{ color: "var(--text)" }}>Dr. {appointment.doctor.name}</p>
+                <p className="text-sm" style={{ color: "var(--text-light)" }}>{appointment.doctor.email}</p>
               </div>
             </div>
           </div>
@@ -250,7 +254,7 @@ export default function DoctorAppointmentDetailPage() {
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Link
-          href="/doctor/dashboard"
+          href="/patient/dashboard"
           className="flex-1 px-4 py-2.5 rounded-xl text-center font-medium transition hover:bg-gray-100 dark:hover:bg-gray-800"
           style={{ backgroundColor: "var(--muted)", color: "var(--text)" }}
         >
@@ -260,15 +264,9 @@ export default function DoctorAppointmentDetailPage() {
           <>
             <button
               className="flex-1 px-4 py-2.5 rounded-xl text-center font-medium text-white transition hover:scale-105"
-              style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
-            >
-              Confirm Appointment
-            </button>
-            <button
-              className="flex-1 px-4 py-2.5 rounded-xl text-center font-medium text-white transition hover:scale-105"
               style={{ background: "linear-gradient(135deg, rgb(239,68,68), rgb(220,38,38))" }}
             >
-              Cancel
+              Cancel Appointment
             </button>
           </>
         )}

@@ -6,6 +6,9 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, LogIn, Stethoscope, Calendar, Activity, Sparkles, Shield } from "lucide-react";
 import SimpleTheme from "../components/SimpleTheme";
 
+// ✅ Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -45,7 +48,8 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      // ✅ Updated: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
@@ -54,7 +58,6 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // ✅ Professional error message
         setError("Invalid email or password. Please try again.");
         throw new Error(data.error || "Login failed");
       }

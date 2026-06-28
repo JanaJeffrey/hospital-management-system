@@ -15,6 +15,9 @@ import {
   AreaChart, Area
 } from "recharts";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -72,7 +75,8 @@ export default function AnalyticsPage() {
         setIsLoading(true);
         setError("");
         
-        const trendsRes = await fetch("http://localhost:5000/api/analytics/trends", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const trendsRes = await fetch(`${API_URL}/api/analytics/trends`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -88,7 +92,8 @@ export default function AnalyticsPage() {
           setWeeklyData(trendsData);
         }
         
-        const statsRes = await fetch("http://localhost:5000/api/analytics/stats", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const statsRes = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         

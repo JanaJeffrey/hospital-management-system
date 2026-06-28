@@ -1,29 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   ArrowLeft, Video, Mic, MicOff, VideoOff, 
   PhoneOff, Calendar, Clock, User, CheckCircle,
   AlertCircle, Camera, Monitor, Share2,
-  Maximize2, Minimize2, X
+  Maximize2, Minimize2, X, Loader2
 } from "lucide-react";
+
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+interface Appointment {
+  id: number;
+  doctorId: number;
+  doctor: {
+    name: string;
+    email: string;
+  };
+  dateTime: string;
+  status: string;
+  reason: string | null;
+}
 
 export default function VideoConsultPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentId = searchParams.get('appointmentId');
+  
+  // ✅ State
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState("");
-  const [doctorName, setDoctorName] = useState("Dr. Sarah Johnson");
-  const [appointmentTime, setAppointmentTime] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [showEndCallModal, setShowEndCallModal] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(true);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ Check authentication and fetch appointment
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
@@ -38,59 +62,323 @@ export default function VideoConsultPage() {
       setUserName(user.name || "Patient");
       setIsAuthenticated(true);
       
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-      setAppointmentTime(timeStr);
+      if (appointmentId) {
+        fetchAppointmentDetails(parseInt(appointmentId));
+      } else {
+        // If no appointment ID, fetch the latest upcoming appointment
+        fetchLatestAppointment();
+      }
     } catch (e) {
       router.replace("/login");
     }
-  }, [router]);
+  }, [router, appointmentId]);
 
-  // ✅ Call duration timer - only when active
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isCallActive) {
-      interval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
+  // ✅ Fetch specific appointment
+  const fetchAppointmentDetails = async (id: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      setError("");
+      
+      // Try to get from appointments list first
+      const response = await fetch(`${API_URL}/api/appointments/my`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        router.replace("/login");
+        return;
+      }
+      
+      if (!response.ok) throw new Error("Failed to fetch appointment");
+      
+      const appointments = await response.json();
+      const found = appointments.find((apt: any) => apt.id === id);
+      
+      if (!found) {
+        setError("Appointment not found");
+        return;
+      }
+      
+      setAppointment(found);
+      
+    } catch (err: any) {
+      console.error("Error fetching appointment:", err);
+      setError(err.message || "Failed to load appointment");
+    } finally {
+      setIsLoading(false);
     }
-    return () => clearInterval(interval);
-  }, [isCallActive]);
-
-  const handleJoinCall = () => {
-    setShowJoinModal(false);
-    setIsCallActive(true);
   };
 
+  // ✅ Fetch latest upcoming appointment
+  const fetchLatestAppointment = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      setError("");
+      
+      const response = await fetch(`${API_URL}/api/appointments/my`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        router.replace("/login");
+        return;
+      }
+      
+      if (!response.ok) throw new Error("Failed to fetch appointments");
+      
+      const appointments = await response.json();
+      
+      // Find the nearest upcoming appointment (CONFIRMED or PENDING)
+      const now = new Date();
+      const upcoming = appointments
+        .filter((apt: any) => 
+          (apt.status === "CONFIRMED" || apt.status === "PENDING") && 
+          new Date(apt.dateTime) > now
+        )
+        .sort((a: any, b: any) => 
+          new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+        );
+      
+      if (upcoming.length === 0) {
+        setError("No upcoming appointments found. Please book an appointment first.");
+        return;
+      }
+      
+      setAppointment(upcoming[0]);
+      
+    } catch (err: any) {
+      console.error("Error fetching appointments:", err);
+      setError(err.message || "Failed to load appointments");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ Initialize camera and microphone
+  const initializeMedia = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      setLocalStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      return true;
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+      // If camera fails, try audio only
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true
+        });
+        setLocalStream(audioStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = audioStream;
+        }
+        setCameraOn(false);
+        return true;
+      } catch (audioErr) {
+        setError("Unable to access camera or microphone. Please check your permissions.");
+        return false;
+      }
+    }
+  };
+
+  // ✅ Join call
+  const handleJoinCall = async () => {
+    setIsUpdatingStatus(true);
+    setError("");
+    
+    try {
+      // Initialize media
+      const mediaReady = await initializeMedia();
+      if (!mediaReady) {
+        setIsUpdatingStatus(false);
+        return;
+      }
+      
+      // Update appointment status to CONFIRMED
+      if (appointment) {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: "CONFIRMED" })
+        });
+        
+        if (!response.ok) {
+          console.warn("Could not update appointment status");
+        }
+      }
+      
+      setIsCallActive(true);
+      
+      // Start timer
+      callTimerRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+      
+    } catch (err: any) {
+      setError(err.message || "Failed to join call");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  // ✅ End call
   const handleEndCall = () => {
     setShowEndCallModal(true);
   };
 
-  const confirmEndCall = () => {
+  const confirmEndCall = async () => {
     setShowEndCallModal(false);
-    setIsCallActive(false);
-    router.push("/patient/dashboard");
+    setIsUpdatingStatus(true);
+    
+    try {
+      // Stop timer
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+      
+      // Stop media stream
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
+      
+      // Update appointment status to COMPLETED
+      if (appointment) {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: "COMPLETED" })
+        });
+        
+        if (!response.ok) {
+          console.warn("Could not update appointment status");
+        }
+      }
+      
+      setIsCallActive(false);
+      
+      // Redirect to dashboard
+      router.push("/patient/dashboard");
+      
+    } catch (err: any) {
+      setError(err.message || "Failed to end call");
+      setIsUpdatingStatus(false);
+    }
   };
 
   const cancelEndCall = () => {
     setShowEndCallModal(false);
   };
 
+  // ✅ Toggle microphone
+  const toggleMic = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setMicOn(!micOn);
+    }
+  };
+
+  // ✅ Toggle camera
+  const toggleCamera = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setCameraOn(!cameraOn);
+    }
+  };
+
+  // ✅ Toggle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  // ✅ Format duration
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  // ✅ Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [localStream]);
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: "rgb(16,185,129)" }} />
+          <p style={{ color: "var(--text-light)" }}>Loading appointment details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !appointment) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>No Appointment Found</h2>
+          <p className="mt-2" style={{ color: "var(--text-light)" }}>{error || "Please book an appointment before starting a video consultation."}</p>
+          <Link 
+            href="/patient/book-appointment"
+            className="inline-block mt-4 px-4 py-2 rounded-xl text-white"
+            style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
+          >
+            Book Appointment
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -124,29 +412,32 @@ export default function VideoConsultPage() {
       {/* Video Container */}
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center relative">
-          {/* Main Video */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {cameraOn ? (
-              <div className="text-center">
-                <Video className="w-16 h-16 mx-auto text-white/30 mb-4" />
-                <p className="text-white/50">Camera feed will appear here</p>
-                <p className="text-white/30 text-sm mt-2">(In production, this would show your camera stream)</p>
-              </div>
-            ) : (
+          {/* Local Video */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`absolute inset-0 w-full h-full object-cover ${!cameraOn ? 'hidden' : ''}`}
+          />
+          
+          {/* Camera Off Overlay */}
+          {!cameraOn && (
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <VideoOff className="w-16 h-16 mx-auto text-red-500/50 mb-4" />
                 <p className="text-white/50">Camera is off</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Doctor's Video (Picture-in-Picture) */}
+          {/* Doctor's Picture-in-Picture */}
           <div className="absolute bottom-4 right-4 w-32 sm:w-48 h-24 sm:h-36 rounded-xl bg-gradient-to-br from-emerald-900/80 to-teal-900/80 border-2 border-white/20 flex items-center justify-center backdrop-blur-sm">
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-1">
                 <User className="w-5 h-5 text-white" />
               </div>
-              <p className="text-white text-xs font-medium">{doctorName}</p>
+              <p className="text-white text-xs font-medium">Dr. {appointment.doctor.name}</p>
               <p className="text-white/50 text-[10px]">{isCallActive ? 'Connected' : 'Waiting'}</p>
             </div>
           </div>
@@ -157,7 +448,9 @@ export default function VideoConsultPage() {
             <span className="text-white text-xs font-medium">
               {isCallActive ? 'Live' : 'Waiting to join...'}
             </span>
-            <span className="text-white/50 text-xs ml-2">{appointmentTime}</span>
+            <span className="text-white/50 text-xs ml-2">
+              {new Date(appointment.dateTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            </span>
           </div>
 
           {/* Patient Name */}
@@ -180,13 +473,20 @@ export default function VideoConsultPage() {
                   <Video className="w-10 h-10 text-emerald-400" />
                 </div>
                 <h3 className="text-white text-xl font-semibold mb-2">Ready to Connect</h3>
-                <p className="text-white/60 text-sm mb-6">Your video consultation with {doctorName} is ready</p>
+                <p className="text-white/60 text-sm mb-6">
+                  Your video consultation with Dr. {appointment.doctor.name} is ready
+                </p>
                 <button
                   onClick={handleJoinCall}
-                  className="px-8 py-3 rounded-xl text-white font-medium hover:scale-105 transition"
+                  disabled={isUpdatingStatus}
+                  className="px-8 py-3 rounded-xl text-white font-medium hover:scale-105 transition disabled:opacity-50 disabled:hover:scale-100"
                   style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
                 >
-                  Join Call
+                  {isUpdatingStatus ? (
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                  ) : (
+                    'Join Call'
+                  )}
                 </button>
               </div>
             </div>
@@ -196,8 +496,9 @@ export default function VideoConsultPage() {
         {/* Controls */}
         <div className="p-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           <button
-            onClick={() => setMicOn(!micOn)}
-            className={`p-3 sm:p-4 rounded-full transition-all hover:scale-110 ${micOn ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-500'}`}
+            onClick={toggleMic}
+            disabled={!isCallActive}
+            className={`p-3 sm:p-4 rounded-full transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 ${micOn ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-500'}`}
           >
             {micOn ? (
               <Mic className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: micOn ? 'var(--text)' : 'white' }} />
@@ -207,8 +508,9 @@ export default function VideoConsultPage() {
           </button>
           
           <button
-            onClick={() => setCameraOn(!cameraOn)}
-            className={`p-3 sm:p-4 rounded-full transition-all hover:scale-110 ${cameraOn ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-500'}`}
+            onClick={toggleCamera}
+            disabled={!isCallActive}
+            className={`p-3 sm:p-4 rounded-full transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 ${cameraOn ? 'bg-gray-200 dark:bg-gray-700' : 'bg-red-500'}`}
           >
             {cameraOn ? (
               <Camera className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: cameraOn ? 'var(--text)' : 'white' }} />
@@ -218,8 +520,20 @@ export default function VideoConsultPage() {
           </button>
 
           <button
-            onClick={() => {/* Share screen functionality */}}
-            className="p-3 sm:p-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all hover:scale-110"
+            onClick={() => {
+              if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+                navigator.mediaDevices.getDisplayMedia({ video: true })
+                  .then((stream) => {
+                    // Handle screen sharing
+                    console.log("Screen sharing started");
+                  })
+                  .catch((err) => {
+                    console.error("Screen sharing cancelled or failed:", err);
+                  });
+              }
+            }}
+            disabled={!isCallActive}
+            className="p-3 sm:p-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
           >
             <Share2 className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'var(--text)' }} />
           </button>
@@ -227,7 +541,8 @@ export default function VideoConsultPage() {
           {isCallActive && (
             <button
               onClick={handleEndCall}
-              className="p-3 sm:p-4 rounded-full bg-red-500 hover:bg-red-600 transition-all hover:scale-110"
+              disabled={isUpdatingStatus}
+              className="p-3 sm:p-4 rounded-full bg-red-500 hover:bg-red-600 transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
             >
               <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </button>
@@ -243,7 +558,7 @@ export default function VideoConsultPage() {
           </div>
           <div>
             <p className="text-xs" style={{ color: "var(--text-light)" }}>Doctor</p>
-            <p className="font-medium text-sm" style={{ color: "var(--text)" }}>{doctorName}</p>
+            <p className="font-medium text-sm" style={{ color: "var(--text)" }}>Dr. {appointment.doctor.name}</p>
           </div>
         </div>
         <div className="p-4 rounded-xl flex items-center gap-3" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
@@ -253,7 +568,7 @@ export default function VideoConsultPage() {
           <div>
             <p className="text-xs" style={{ color: "var(--text-light)" }}>Date</p>
             <p className="font-medium text-sm" style={{ color: "var(--text)" }}>
-              {new Date().toLocaleDateString("en-US", { 
+              {new Date(appointment.dateTime).toLocaleDateString("en-US", { 
                 weekday: "short", 
                 month: "short", 
                 day: "numeric" 
@@ -267,12 +582,17 @@ export default function VideoConsultPage() {
           </div>
           <div>
             <p className="text-xs" style={{ color: "var(--text-light)" }}>Time</p>
-            <p className="font-medium text-sm" style={{ color: "var(--text)" }}>{appointmentTime}</p>
+            <p className="font-medium text-sm" style={{ color: "var(--text)" }}>
+              {new Date(appointment.dateTime).toLocaleTimeString("en-US", { 
+                hour: "2-digit", 
+                minute: "2-digit" 
+              })}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ✅ CUSTOM END CALL MODAL - No browser alert */}
+      {/* End Call Modal */}
       {showEndCallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="max-w-md w-full rounded-2xl shadow-2xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
@@ -282,7 +602,7 @@ export default function VideoConsultPage() {
               </div>
               <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>End Video Call?</h3>
               <p className="text-sm" style={{ color: "var(--text-light)" }}>
-                Are you sure you want to end this video consultation? The call will be disconnected.
+                Are you sure you want to end this video consultation with Dr. {appointment.doctor.name}?
               </p>
               <div className="flex gap-3 mt-6">
                 <button
@@ -294,49 +614,15 @@ export default function VideoConsultPage() {
                 </button>
                 <button
                   onClick={confirmEndCall}
-                  className="flex-1 px-4 py-2 rounded-xl text-white font-medium transition hover:scale-105"
+                  disabled={isUpdatingStatus}
+                  className="flex-1 px-4 py-2 rounded-xl text-white font-medium transition hover:scale-105 disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg, rgb(239,68,68), rgb(220,38,38))" }}
                 >
-                  End Call
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ CUSTOM JOIN MODAL */}
-      {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="max-w-md w-full rounded-2xl shadow-2xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}>
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center">
-                <Video className="w-8 h-8 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text)" }}>Video Consultation</h3>
-              <p className="text-sm" style={{ color: "var(--text-light)" }}>
-                You are about to start a video consultation with <strong>{doctorName}</strong>.
-              </p>
-              <p className="text-xs mt-2" style={{ color: "var(--text-light)" }}>
-                Please ensure your camera and microphone are ready.
-              </p>
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowJoinModal(false);
-                    router.push("/patient/dashboard");
-                  }}
-                  className="flex-1 px-4 py-2 rounded-xl font-medium transition hover:bg-gray-100 dark:hover:bg-gray-800"
-                  style={{ backgroundColor: "var(--muted)", color: "var(--text)" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleJoinCall}
-                  className="flex-1 px-4 py-2 rounded-xl text-white font-medium transition hover:scale-105"
-                  style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
-                >
-                  Join Now
+                  {isUpdatingStatus ? (
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                  ) : (
+                    'End Call'
+                  )}
                 </button>
               </div>
             </div>

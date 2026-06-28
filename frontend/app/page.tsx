@@ -101,13 +101,12 @@ export default function HomePage() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">HMS</span>
               </div>
-              {/* ✅ FIXED: Dark mode text visibility - always white/green */}
-              <span className="font-bold text-xl hidden sm:inline text-white dark:text-white">
-                MediCare<span className="text-emerald-400 dark:text-emerald-400">Hub</span>
+              <span className="font-bold text-xl hidden sm:inline" style={{ color: "#1e293b", textShadow: "0 1px 8px rgba(255,255,255,0.15)" }}>
+                MediCare<span style={{ color: "rgb(16,185,129)" }}>Hub</span>
               </span>
             </div>
 
-            {/* ✅ FIXED: Desktop nav links - always white in dark mode */}
+            {/* ✅ FIXED: Nav links with slate-800 color + text shadow for hero visibility */}
             <div className="hidden md:flex items-center gap-6">
               {navLinks.map((link) => (
                 <button 
@@ -115,12 +114,12 @@ export default function HomePage() {
                   onClick={() => scrollToSection(link.id)}
                   className={`cursor-pointer transition ${
                     activeSection === link.id 
-                      ? "text-emerald-400 border-b-2 border-emerald-400 pb-1" 
-                      : "text-white dark:text-white hover:text-emerald-400"
+                      ? "border-b-2 border-emerald-500 pb-1" 
+                      : "hover:text-emerald-500"
                   }`}
                   style={{ 
-                    color: activeSection === link.id ? "rgb(52,211,153)" : "white",
-                    textShadow: "0 1px 8px rgba(0,0,0,0.3)"
+                    color: activeSection === link.id ? "rgb(16,185,129)" : "#1e293b",
+                    textShadow: "0 1px 8px rgba(255,255,255,0.15)"
                   }}
                 >
                   {link.label}
@@ -128,12 +127,16 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* ✅ FIXED: Desktop buttons - always visible in dark mode */}
+            {/* ✅ FIXED: Desktop buttons with slate-800 color + text shadow */}
             <div className="hidden md:flex items-center gap-3">
               <SimpleTheme />
               <Link 
                 href="/login" 
-                className="cursor-pointer px-4 py-2 rounded-lg transition hover:bg-white/20 text-white dark:text-white"
+                className="cursor-pointer px-4 py-2 rounded-lg transition hover:bg-[var(--muted)]"
+                style={{ 
+                  color: "#1e293b",
+                  textShadow: "0 1px 8px rgba(255,255,255,0.15)"
+                }}
               >
                 Sign In
               </Link>
@@ -146,10 +149,14 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* ✅ Mobile Menu Button - always visible */}
+            {/* ✅ Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="cursor-pointer md:hidden p-2 rounded-lg transition hover:bg-white/20 text-white dark:text-white"
+              className="cursor-pointer md:hidden p-2 rounded-lg transition hover:bg-[var(--muted)]"
+              style={{ 
+                color: "#1e293b",
+                textShadow: "0 1px 8px rgba(255,255,255,0.15)"
+              }}
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

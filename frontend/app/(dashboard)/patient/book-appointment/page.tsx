@@ -9,6 +9,9 @@ import {
   ChevronLeft, ChevronRight, X
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Doctor {
   id: number;
   name: string;
@@ -57,7 +60,8 @@ export default function BookAppointmentPage() {
     if (!token) return;
     
     try {
-      const response = await fetch("http://localhost:5000/api/appointments/doctors", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/appointments/doctors`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -92,7 +96,8 @@ export default function BookAppointmentPage() {
     setIsBooking(true);
     
     try {
-      const response = await fetch("http://localhost:5000/api/appointments/book", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/appointments/book`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

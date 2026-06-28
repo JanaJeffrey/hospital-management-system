@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Notification {
   id: number;
   type: string;
@@ -27,7 +30,8 @@ export function useNotifications() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch('http://localhost:5000/api/notifications', {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -64,7 +68,8 @@ export function useNotifications() {
 
     const connectSSE = () => {
       try {
-        const url = `http://localhost:5000/api/notifications/stream?token=${encodeURIComponent(token)}`;
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const url = `${API_URL}/api/notifications/stream?token=${encodeURIComponent(token)}`;
         console.log('📡 Connecting to SSE:', url);
         
         const es = new EventSource(url);
@@ -165,7 +170,8 @@ export function useNotifications() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/notifications/${id}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -187,7 +193,8 @@ export function useNotifications() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch('http://localhost:5000/api/notifications/read-all', {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/notifications/read-all`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });

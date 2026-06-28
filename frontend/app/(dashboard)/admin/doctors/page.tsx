@@ -12,6 +12,9 @@ import {
   Mail, Phone, MapPin, Building, BookOpen
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface PendingDoctor {
   id: number;
   name: string;
@@ -79,7 +82,8 @@ export default function AdminDoctorsPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch("http://localhost:5000/api/auth/pending-doctors", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/pending-doctors`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -112,7 +116,8 @@ export default function AdminDoctorsPage() {
     setSuccess("");
     
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/doctors/${doctorId}/status`, {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/doctors/${doctorId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +172,8 @@ export default function AdminDoctorsPage() {
     setSuccess("");
     
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/doctors/${rejectDoctorId}/status`, {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/doctors/${rejectDoctorId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

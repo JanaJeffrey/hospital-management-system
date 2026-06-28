@@ -10,6 +10,9 @@ import {
   Trash2, Mail, Calendar, Award, Briefcase
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface User {
   id: number;
   name: string;
@@ -76,7 +79,8 @@ export default function AdminUsersPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch("http://localhost:5000/api/auth/all-users", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/all-users`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -111,9 +115,8 @@ export default function AdminUsersPage() {
     setError("");
     
     try {
-      // Since we don't have a specific delete endpoint for users,
-      // we use the delete-account endpoint with the user's ID
-      const response = await fetch(`http://localhost:5000/api/auth/delete-account`, {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/auth/delete-account`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -355,7 +358,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* ✅ View Button - Shows user details */}
+                        {/* View Button - Shows user details */}
                         <button
                           onClick={() => openViewModal(user)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
@@ -364,7 +367,7 @@ export default function AdminUsersPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* ✅ Delete Button - Only for non-admin users */}
+                        {/* Delete Button - Only for non-admin users */}
                         {user.role !== "ADMIN" && (
                           <button
                             onClick={() => openDeleteModal(user)}
@@ -398,7 +401,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* ✅ DELETE CONFIRMATION MODAL */}
+      {/* DELETE CONFIRMATION MODAL */}
       {showDeleteModal && userToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}>
           <div className="max-w-md w-full rounded-2xl shadow-xl" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>
@@ -451,7 +454,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* ✅ VIEW USER DETAILS MODAL */}
+      {/* VIEW USER DETAILS MODAL */}
       {showViewModal && userToView && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowViewModal(false)}>
           <div className="max-w-lg w-full rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>

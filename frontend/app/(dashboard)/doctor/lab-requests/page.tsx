@@ -10,6 +10,9 @@ import {
   Microscope, TestTube, Loader2, X
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface LabRequest {
   id: number;
   patientId: number;
@@ -85,7 +88,8 @@ export default function DoctorLabRequestsPage() {
       setIsLoading(true);
       setError("");
       
-      const response = await fetch("http://localhost:5000/api/analytics/stats", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/analytics/stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -119,7 +123,8 @@ export default function DoctorLabRequestsPage() {
     if (!token) return;
     
     try {
-      const response = await fetch("http://localhost:5000/api/analytics/stats", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/analytics/stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -394,7 +399,7 @@ export default function DoctorLabRequestsPage() {
         </p>
       </div>
 
-      {/* ✅ Add Lab Request Modal */}
+      {/* Add Lab Request Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
           <div className="max-w-md w-full rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }} onClick={(e) => e.stopPropagation()}>

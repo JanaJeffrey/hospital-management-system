@@ -11,6 +11,9 @@ import {
   RefreshCw
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Appointment {
   id: number;
   patientId: number;
@@ -44,6 +47,7 @@ export default function DoctorDashboard() {
   const [doctorName, setDoctorName] = useState("");
   const [error, setError] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [videoConsultError, setVideoConsultError] = useState("");
 
   // Check authentication
   useEffect(() => {
@@ -86,7 +90,8 @@ export default function DoctorDashboard() {
         setIsLoading(true);
         setError("");
         
-        const response = await fetch("http://localhost:5000/api/analytics/stats", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const response = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -112,6 +117,32 @@ export default function DoctorDashboard() {
     
     fetchStats();
   }, [isAuthenticated, router]);
+
+  // ✅ Handle Video Consult click
+  const handleVideoConsult = () => {
+    const appointments = data?.appointments || [];
+    
+    // Find the first upcoming appointment (CONFIRMED or PENDING)
+    const now = new Date();
+    const upcoming = appointments
+      .filter((apt: any) => 
+        (apt.status === "CONFIRMED" || apt.status === "PENDING") && 
+        new Date(apt.dateTime) > now
+      )
+      .sort((a: any, b: any) => 
+        new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+      );
+    
+    if (upcoming.length === 0) {
+      setVideoConsultError("No upcoming appointments available for video consultation.");
+      // Clear error after 5 seconds
+      setTimeout(() => setVideoConsultError(""), 5000);
+      return;
+    }
+    
+    // Navigate to video consult with the first upcoming appointment
+    router.push(`/doctor/video-consult?appointmentId=${upcoming[0].id}`);
+  };
 
   const formatTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleTimeString("en-US", {
@@ -217,6 +248,17 @@ export default function DoctorDashboard() {
         </button>
       </div>
 
+      {/* Video Consult Error Message */}
+      {videoConsultError && (
+        <div className="p-4 rounded-xl flex items-start gap-3" style={{ backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "rgb(239,68,68)" }} />
+          <div>
+            <p className="font-medium" style={{ color: "rgb(239,68,68)" }}>No Appointment Available</p>
+            <p className="text-sm" style={{ color: "rgb(239,68,68)" }}>{videoConsultError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards - ALL REAL DATA */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         <StatCard title="Today's Patients" value={stats.todayPatients} icon={Users} color="emerald" />
@@ -266,7 +308,6 @@ export default function DoctorDashboard() {
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(apt.status)}`}>
                       {getStatusIcon(apt.status)} {getStatusText(apt.status)}
                     </span>
-                    {/* ✅ FIXED: Link to appointment details */}
                     <Link 
                       href={`/doctor/appointments/${apt.id}`}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
@@ -293,24 +334,28 @@ export default function DoctorDashboard() {
               title="Write Prescription"
               description="Create a new prescription"
               color="emerald"
+              onClick={() => router.push("/doctor/prescriptions")}
             />
             <QuickActionCard
               icon={<FileText className="w-4 h-4" />}
               title="Request Lab Test"
               description="Order blood work or imaging"
               color="purple"
+              onClick={() => router.push("/doctor/lab-requests")}
             />
             <QuickActionCard
               icon={<Clock className="w-4 h-4" />}
               title="Block Time Off"
               description="Mark unavailable hours"
               color="red"
+              onClick={() => {/* Add your time off logic */}}
             />
             <QuickActionCard
               icon={<Video className="w-4 h-4" />}
               title="Start Video Consult"
               description="Connect with patient remotely"
               color="blue"
+              onClick={handleVideoConsult}
             />
           </div>
         </div>
@@ -352,11 +397,12 @@ function StatCard({ title, value, icon: Icon, color }: {
 }
 
 // ========== QUICK ACTION CARD ==========
-function QuickActionCard({ icon, title, description, color }: {
+function QuickActionCard({ icon, title, description, color, onClick }: {
   icon: React.ReactNode;
   title: string;
   description: string;
   color: string;
+  onClick: () => void;
 }) {
   const getBgColor = () => {
     switch (color) {
@@ -389,7 +435,11 @@ function QuickActionCard({ icon, title, description, color }: {
   };
   
   return (
-    <button className="w-full p-3 sm:p-4 text-left rounded-xl transition-all hover:scale-[1.02] cursor-pointer" style={{ backgroundColor: getBgColor() }}>
+    <button 
+      onClick={onClick}
+      className="w-full p-3 sm:p-4 text-left rounded-xl transition-all hover:scale-[1.02] cursor-pointer" 
+      style={{ backgroundColor: getBgColor() }}
+    >
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: getIconBg() }}>
           <span style={{ color: getTextColor() }}>{icon}</span>

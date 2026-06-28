@@ -11,6 +11,9 @@ import {
   Eye, Trash2, Edit, UserX
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface DashboardStats {
   totalUsers: number;
   patients: number;
@@ -76,8 +79,8 @@ export default function AdminDashboard() {
       setIsLoading(true);
       setError("");
       
-      // ✅ Fetch ALL users from backend
-      const usersRes = await fetch("http://localhost:5000/api/auth/all-users", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const usersRes = await fetch(`${API_URL}/api/auth/all-users`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -86,9 +89,9 @@ export default function AdminDashboard() {
         setStats(data.counts);
       }
       
-      // ✅ Fetch appointments stats
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
       try {
-        const statsRes = await fetch("http://localhost:5000/api/analytics/stats", {
+        const statsRes = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (statsRes.ok) {

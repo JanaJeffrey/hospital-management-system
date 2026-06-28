@@ -9,6 +9,9 @@ import {
   RefreshCw
 } from "lucide-react";
 
+// ✅ ADDED: Get the API URL from environment variables
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface Appointment {
   id: number;
   doctorId: number;
@@ -93,8 +96,8 @@ export default function PatientDashboard() {
         setIsLoading(true);
         setError("");
         
-        // Fetch appointments
-        const appointmentsRes = await fetch("http://localhost:5000/api/appointments/my", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const appointmentsRes = await fetch(`${API_URL}/api/appointments/my`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -112,8 +115,8 @@ export default function PatientDashboard() {
         const appointmentsData = await appointmentsRes.json();
         setAppointments(appointmentsData);
         
-        // Fetch doctors
-        const doctorsRes = await fetch("http://localhost:5000/api/appointments/doctors", {
+        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        const doctorsRes = await fetch(`${API_URL}/api/appointments/doctors`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -154,7 +157,8 @@ export default function PatientDashboard() {
     setError("");
     
     try {
-      const response = await fetch("http://localhost:5000/api/appointments/book", {
+      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      const response = await fetch(`${API_URL}/api/appointments/book`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -372,7 +376,6 @@ export default function PatientDashboard() {
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(apt.status)}`}>
                     {getStatusIcon(apt.status)} {apt.status}
                   </span>
-                  {/* ✅ FIXED: Link to appointment details */}
                   <Link 
                     href={`/patient/appointments/${apt.id}`}
                     className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
