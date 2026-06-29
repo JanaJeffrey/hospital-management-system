@@ -3,28 +3,44 @@
 // ✅ THIS FIXES THE VERCEL BUILD ERROR
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { VideoCall } from "@/components/VideoCall";
 
-// ✅ Get the API URL from environment variables
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface Appointment {
   id: number;
   doctorId: number;
-  doctor: {
-    name: string;
-    email: string;
-  };
+  doctor: { name: string; email: string };
   dateTime: string;
   status: string;
   reason: string | null;
 }
 
+// ✅ Main component with Suspense
 export default function PatientVideoConsultPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VideoConsultContent />
+    </Suspense>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: "rgb(16,185,129)" }} />
+        <p style={{ color: "var(--text-light)" }}>Loading video consultation...</p>
+      </div>
+    </div>
+  );
+}
+
+function VideoConsultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const appointmentId = searchParams.get('appointmentId');
@@ -36,7 +52,6 @@ export default function PatientVideoConsultPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState("");
 
-  // ✅ Check authentication
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userStr = localStorage.getItem("user");
@@ -65,7 +80,6 @@ export default function PatientVideoConsultPage() {
     }
   }, [router, appointmentId]);
 
-  // ✅ Fetch specific appointment from BACKEND
   const fetchAppointment = async (id: number) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -74,7 +88,6 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
-      // ✅ REAL API CALL - Fetches patient's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/my`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -97,7 +110,6 @@ export default function PatientVideoConsultPage() {
       }
       
       setAppointment(found);
-      // Generate a unique room ID for the call
       setRoomId(`call-${found.id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -108,7 +120,6 @@ export default function PatientVideoConsultPage() {
     }
   };
 
-  // ✅ Fetch latest upcoming appointment from BACKEND
   const fetchLatestAppointment = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -117,7 +128,6 @@ export default function PatientVideoConsultPage() {
       setIsLoading(true);
       setError("");
       
-      // ✅ REAL API CALL - Fetches patient's appointments from backend
       const response = await fetch(`${API_URL}/api/appointments/my`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -132,8 +142,6 @@ export default function PatientVideoConsultPage() {
       if (!response.ok) throw new Error("Failed to fetch appointments");
       
       const appointments = await response.json();
-      
-      // Find the nearest upcoming appointment (CONFIRMED or PENDING)
       const now = new Date();
       const upcoming = appointments
         .filter((apt: any) => 
@@ -150,7 +158,6 @@ export default function PatientVideoConsultPage() {
       }
       
       setAppointment(upcoming[0]);
-      // Generate a unique room ID for the call
       setRoomId(`call-${upcoming[0].id}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
       
     } catch (err: any) {
@@ -161,12 +168,10 @@ export default function PatientVideoConsultPage() {
     }
   };
 
-  // ✅ Handle end call - Updates appointment status in BACKEND
   const handleEndCall = async () => {
     if (appointment) {
       const token = localStorage.getItem("token");
       try {
-        // ✅ REAL API CALL - Updates appointment status to COMPLETED
         await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
           method: "PUT",
           headers: {
@@ -220,7 +225,6 @@ export default function PatientVideoConsultPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
@@ -238,7 +242,6 @@ export default function PatientVideoConsultPage() {
         </div>
       </div>
 
-      {/* Video Call Component - Uses REAL PeerJS */}
       <VideoCall
         roomId={roomId}
         isDoctor={false}

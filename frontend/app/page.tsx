@@ -86,6 +86,10 @@ export default function HomePage() {
     { id: "testimonials", label: "Testimonials" },
   ];
 
+  // ✅ Determine text color based on scroll state
+  const navTextColor = scrolled ? "var(--text)" : "#ffffff";
+  const navTextShadow = scrolled ? "none" : "0 2px 12px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.4)";
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg)" }}>
       
@@ -97,29 +101,35 @@ export default function HomePage() {
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection("home")}>
               <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">HMS</span>
               </div>
-              <span className="font-bold text-xl hidden sm:inline" style={{ color: "#1e293b", textShadow: "0 1px 8px rgba(255,255,255,0.15)" }}>
+              <span className="font-bold text-xl hidden sm:inline" style={{ 
+                color: navTextColor,
+                textShadow: navTextShadow
+              }}>
                 MediCare<span style={{ color: "rgb(16,185,129)" }}>Hub</span>
               </span>
             </div>
 
-            {/* ✅ FIXED: Nav links with slate-800 color + text shadow for hero visibility */}
+            {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center gap-6">
               {navLinks.map((link) => (
                 <button 
                   key={link.id}
                   onClick={() => scrollToSection(link.id)}
-                  className={`cursor-pointer transition ${
+                  className={`cursor-pointer transition-all duration-300 ${
                     activeSection === link.id 
-                      ? "border-b-2 border-emerald-500 pb-1" 
-                      : "hover:text-emerald-500"
+                      ? "border-b-2 border-emerald-400 pb-1" 
+                      : "hover:text-emerald-400 hover:scale-105"
                   }`}
                   style={{ 
-                    color: activeSection === link.id ? "rgb(16,185,129)" : "#1e293b",
-                    textShadow: "0 1px 8px rgba(255,255,255,0.15)"
+                    color: navTextColor,
+                    textShadow: navTextShadow,
+                    fontWeight: 500,
+                    letterSpacing: "0.3px"
                   }}
                 >
                   {link.label}
@@ -127,35 +137,35 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* ✅ FIXED: Desktop buttons with slate-800 color + text shadow */}
+            {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-3">
               <SimpleTheme />
               <Link 
                 href="/login" 
-                className="cursor-pointer px-4 py-2 rounded-lg transition hover:bg-[var(--muted)]"
+                className="cursor-pointer px-4 py-2 rounded-lg transition-all duration-300 hover:bg-white/20 hover:scale-105"
                 style={{ 
-                  color: "#1e293b",
-                  textShadow: "0 1px 8px rgba(255,255,255,0.15)"
+                  color: navTextColor,
+                  textShadow: navTextShadow
                 }}
               >
                 Sign In
               </Link>
               <Link 
                 href="/register" 
-                className="cursor-pointer px-4 py-2 rounded-xl text-white font-medium hover:scale-105 transition" 
-                style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))" }}
+                className="cursor-pointer px-4 py-2 rounded-xl text-white font-medium hover:scale-105 transition-all duration-300" 
+                style={{ background: "linear-gradient(135deg, rgb(16,185,129), rgb(20,184,166))", boxShadow: "0 4px 20px rgba(16,185,129,0.4)" }}
               >
                 Get Started
               </Link>
             </div>
 
-            {/* ✅ Mobile Menu Button */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="cursor-pointer md:hidden p-2 rounded-lg transition hover:bg-[var(--muted)]"
+              className="cursor-pointer md:hidden p-2 rounded-lg transition-all duration-300 hover:bg-white/20"
               style={{ 
-                color: "#1e293b",
-                textShadow: "0 1px 8px rgba(255,255,255,0.15)"
+                color: navTextColor,
+                textShadow: navTextShadow
               }}
               aria-label="Toggle menu"
             >
@@ -165,15 +175,12 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* ✅ Mobile Sidebar - Slide in from LEFT */}
+      {/* Mobile Sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${mobileMenuOpen ? 'block' : 'pointer-events-none'}`}>
-        {/* Overlay */}
         <div 
           className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setMobileMenuOpen(false)}
         />
-        
-        {/* Sidebar - from LEFT */}
         <div className={`absolute left-0 top-0 h-full w-72 shadow-2xl transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: "var(--card)" }}>
           <div className="p-5 border-b flex justify-between items-center" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2">
