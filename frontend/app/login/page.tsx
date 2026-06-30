@@ -6,7 +6,9 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, LogIn, Stethoscope, Calendar, Activity, Sparkles, Shield } from "lucide-react";
 import SimpleTheme from "../components/SimpleTheme";
 
-const API_URL = 'https://medicinehub-backend.onrender.com/api';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,7 +49,7 @@ export default function LoginPage() {
     }
 
     try {
-      // ✅ Updated: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Removed duplicate /api - API_URL no longer has /api at the end
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

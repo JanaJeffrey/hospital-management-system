@@ -12,8 +12,9 @@ import {
   Mail, Phone, MapPin, Building, BookOpen
 } from "lucide-react";
 
-// ✅ ADDED: Get the API URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 interface PendingDoctor {
   id: number;
@@ -82,7 +83,7 @@ export default function AdminDoctorsPage() {
       setIsLoading(true);
       setError("");
       
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/auth/pending-doctors`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -116,7 +117,7 @@ export default function AdminDoctorsPage() {
     setSuccess("");
     
     try {
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/auth/doctors/${doctorId}/status`, {
         method: "PUT",
         headers: {
@@ -172,7 +173,7 @@ export default function AdminDoctorsPage() {
     setSuccess("");
     
     try {
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/auth/doctors/${rejectDoctorId}/status`, {
         method: "PUT",
         headers: {

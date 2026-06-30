@@ -11,8 +11,9 @@ import {
   Eye, Trash2, Edit, UserX
 } from "lucide-react";
 
-// ✅ ADDED: Get the API URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 interface DashboardStats {
   totalUsers: number;
@@ -79,7 +80,7 @@ export default function AdminDashboard() {
       setIsLoading(true);
       setError("");
       
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       const usersRes = await fetch(`${API_URL}/api/auth/all-users`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
         setStats(data.counts);
       }
       
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       try {
         const statsRes = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }

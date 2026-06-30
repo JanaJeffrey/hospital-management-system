@@ -15,8 +15,9 @@ import {
   AreaChart, Area
 } from "recharts";
 
-// ✅ ADDED: Get the API URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 interface StatCardProps {
   title: string;
@@ -75,7 +76,7 @@ export default function AnalyticsPage() {
         setIsLoading(true);
         setError("");
         
-        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        // ✅ FIXED: Using correct API_URL with /api
         const trendsRes = await fetch(`${API_URL}/api/analytics/trends`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -92,7 +93,7 @@ export default function AnalyticsPage() {
           setWeeklyData(trendsData);
         }
         
-        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        // ✅ FIXED: Using correct API_URL with /api
         const statsRes = await fetch(`${API_URL}/api/analytics/stats`, {
           headers: { "Authorization": `Bearer ${token}` }
         });

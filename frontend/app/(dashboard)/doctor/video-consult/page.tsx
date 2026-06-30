@@ -9,7 +9,9 @@ import Link from "next/link";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { VideoCall } from "@/components/VideoCall";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 interface Appointment {
   id: number;
@@ -88,6 +90,7 @@ function VideoConsultContent() {
       setIsLoading(true);
       setError("");
       
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -128,6 +131,7 @@ function VideoConsultContent() {
       setIsLoading(true);
       setError("");
       
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/appointments/doctor`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -172,6 +176,7 @@ function VideoConsultContent() {
     if (appointment) {
       const token = localStorage.getItem("token");
       try {
+        // ✅ FIXED: Using correct API_URL with /api
         await fetch(`${API_URL}/api/appointments/${appointment.id}/status`, {
           method: "PUT",
           headers: {

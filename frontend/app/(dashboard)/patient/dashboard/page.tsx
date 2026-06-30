@@ -9,8 +9,9 @@ import {
   RefreshCw
 } from "lucide-react";
 
-// ✅ ADDED: Get the API URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// ✅ FIXED: Correct Render URL (medicurehub, NOT medicinehub)
+// ✅ FIXED: No /api at the end (will add /api in the fetch call)
+const API_URL = 'https://medicurehub-backend.onrender.com';
 
 interface Appointment {
   id: number;
@@ -96,7 +97,7 @@ export default function PatientDashboard() {
         setIsLoading(true);
         setError("");
         
-        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        // ✅ FIXED: Using correct API_URL with /api
         const appointmentsRes = await fetch(`${API_URL}/api/appointments/my`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -115,7 +116,7 @@ export default function PatientDashboard() {
         const appointmentsData = await appointmentsRes.json();
         setAppointments(appointmentsData);
         
-        // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+        // ✅ FIXED: Using correct API_URL with /api
         const doctorsRes = await fetch(`${API_URL}/api/appointments/doctors`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -157,7 +158,7 @@ export default function PatientDashboard() {
     setError("");
     
     try {
-      // ✅ CHANGED: Using environment variable instead of hardcoded localhost
+      // ✅ FIXED: Using correct API_URL with /api
       const response = await fetch(`${API_URL}/api/appointments/book`, {
         method: "POST",
         headers: {
