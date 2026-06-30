@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, User, UserPlus, Stethoscope, Calendar, Activity, Sparkles, Award, FileText, Clock } from "lucide-react";
 import SimpleTheme from "../components/SimpleTheme";
 
-// ✅ ADDED: Get the API URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = 'https://medicinehub-backend.onrender.com/api';
 
 export default function RegisterPage() {
   const router = useRouter();
